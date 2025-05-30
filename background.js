@@ -8,14 +8,13 @@ const rule = {
     action: {
         type: 'modifyHeaders',
         requestHeaders: [
-            { header: 'Landonline-DB', operation: 'set', value: 'postgres' }
+            {header: 'Landonline-DB', operation: 'set', value: 'postgres'}, //xhr
+            {header: 'landonline', operation: 'set', value: 'postgres'} //s3
         ]
     },
     condition: {
         urlFilter: '*',
-        resourceTypes: ['main_frame', 'sub_frame', 'stylesheet', 'script', 'image',
-            'font', 'object', 'xmlhttprequest', 'ping', 'csp_report',
-            'media', 'websocket', 'other']
+        resourceTypes: ['main_frame', 'xmlhttprequest']
     }
 };
 
@@ -32,7 +31,7 @@ chrome.storage.local.get('isEnabled', async (data) => {
 // Toggle when icon is clicked
 chrome.action.onClicked.addListener(async (tab) => {
     isEnabled = !isEnabled;
-    chrome.storage.local.set({ isEnabled });
+    chrome.storage.local.set({isEnabled});
     updateIcon();
 
     if (isEnabled) {

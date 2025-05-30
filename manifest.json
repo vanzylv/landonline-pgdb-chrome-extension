@@ -11,8 +11,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://*/*",
-    "https://*/*"
+    "https://*.landonline.govt.nz/*"
   ],
   "background": {
     "service_worker": "background.js"
@@ -28,7 +27,7 @@
   },
   "content_scripts": [
     {
-      "matches": ["http://*/*", "https://*/*"],
+      "matches": ["https://*.landonline.govt.nz/*"],
       "exclude_matches": [
         "*://*.google.com/*",
         "*://*.chrome.com/*"
