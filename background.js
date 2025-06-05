@@ -18,6 +18,30 @@ const rule = {
     }
 };
 
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab && tab.url && /^https:\/\/.*\.landonline\.govt\.nz\//.test(tab.url)) {
+        // Optionally re-apply rules or update icon/state
+        chrome.storage.local.get('isEnabled', async (data) => {
+            if (data.isEnabled) {
+                await enableHeaderInjection();
+            } else {
+                await disableHeaderInjection();
+            }
+            // Optionally notify content script
+            try {
+                await chrome.tabs.sendMessage(tab.id, { isEnabled: data.isEnabled });
+            } catch (e) {
+                // Handle injection if needed
+            }
+        });
+    } else {
+        // Optionally disable rules or update icon/state for non-matching tabs
+        await disableHeaderInjection();
+        chrome.action.setTitle({ title: 'Landonline-DB Header: OFF' });
+    }
+});
+
 // Load saved state
 chrome.storage.local.get('isEnabled', async (data) => {
     isEnabled = data.isEnabled || false;
