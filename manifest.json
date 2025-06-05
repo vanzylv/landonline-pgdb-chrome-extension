@@ -28,10 +28,6 @@
   "content_scripts": [
     {
       "matches": ["https://*.landonline.govt.nz/*"],
-      "exclude_matches": [
-        "*://*.google.com/*",
-        "*://*.chrome.com/*"
-      ],
       "js": ["content.js"],
       "css": ["active-indicator.css"]
     }

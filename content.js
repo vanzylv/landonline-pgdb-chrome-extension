@@ -15,7 +15,7 @@
 
         const indicator = document.createElement('div');
         indicator.id = 'landonline-db-indicator';
-        indicator.textContent = 'You are now connecting to postgres';
+        indicator.textContent = 'Connected to Postgres';
         indicator.style.display = 'none'; // Start hidden
         document.body.appendChild(indicator);
         return indicator;

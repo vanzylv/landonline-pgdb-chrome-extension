@@ -13,7 +13,7 @@ const rule = {
         ]
     },
     condition: {
-        urlFilter: '*',
+        urlFilter: 'https://*.landonline.govt.nz/*',
         resourceTypes: ['main_frame', 'xmlhttprequest']
     }
 };
@@ -70,11 +70,13 @@ async function sendMessageToActiveTab(message) {
     } catch (error) {
         console.log('Attempting to inject content script...');
         try {
-            await chrome.scripting.executeScript({
-                target: {tabId: tab.id},
-                files: ['content.js']
-            });
-            await chrome.tabs.sendMessage(tab.id, message);
+            if (/^https:\/\/.*\.landonline\.govt\.nz\//.test(tab.url)) {
+                chrome.scripting.executeScript({
+                    target: { tabId: tab.id },
+                    files: ['content.js']
+                });
+                await chrome.tabs.sendMessage(tab.id, message);
+            }
         } catch (injectError) {
             console.error('Failed to inject content script:', injectError);
         }
