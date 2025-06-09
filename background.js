@@ -1,5 +1,5 @@
-let isEnabled = false;
 const RULE_ID = 1;
+let isEnabled = false;
 
 // Rule definition for declarativeNetRequest
 const rule = {
@@ -8,37 +8,82 @@ const rule = {
     action: {
         type: 'modifyHeaders',
         requestHeaders: [
-            {header: 'Landonline-DB', operation: 'set', value: 'postgres'}, //xhr
-            {header: 'landonline', operation: 'set', value: 'postgres'} //s3
+            { header: 'Landonline-DB', operation: 'set', value: 'postgres' },
+            { header: 'landonline', operation: 'set', value: 'postgres' }
         ]
     },
     condition: {
-        urlFilter: 'https://*.landonline.govt.nz/*',
+        urlFilter: 'https://*.govt.nz/*',
         resourceTypes: ['main_frame', 'xmlhttprequest']
     }
 };
 
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    const tab = await chrome.tabs.get(activeInfo.tabId);
-    if (tab && tab.url && /^https:\/\/.*\.landonline\.govt\.nz\//.test(tab.url)) {
-        // Optionally re-apply rules or update icon/state
-        chrome.storage.local.get('isEnabled', async (data) => {
-            if (data.isEnabled) {
-                await enableHeaderInjection();
-            } else {
-                await disableHeaderInjection();
-            }
-            // Optionally notify content script
-            try {
-                await chrome.tabs.sendMessage(tab.id, { isEnabled: data.isEnabled });
-            } catch (e) {
-                // Handle injection if needed
-            }
-        });
+// Utility: Check if a URL matches the required pattern
+function matchesLandonlineUrl(url) {
+    return /^https:\/\/.*\.(landonline|linz)\.govt\.nz\//.test(url);
+}
+
+// Utility: Handle tab updates (activated, updated, or created)
+async function handleTabUpdate(tabId, url) {
+    if (matchesLandonlineUrl(url)) {
+        const { isEnabled } = await chrome.storage.local.get('isEnabled');
+        if (isEnabled) {
+            await enableHeaderInjection();
+            await sendMessageToTab(tabId, { isEnabled });
+        } else {
+            await disableHeaderInjection();
+            await sendMessageToTab(tabId, { isEnabled: false });
+        }
     } else {
-        // Optionally disable rules or update icon/state for non-matching tabs
         await disableHeaderInjection();
         chrome.action.setTitle({ title: 'Landonline-DB Header: OFF' });
+    }
+}
+
+async function sendMessageToTab(tabId, message) {
+    try {
+        // Check if the tab exists
+        const tab = await chrome.tabs.get(tabId);
+        if (!tab) {
+            console.warn(`Tab with ID ${tabId} does not exist.`);
+            return;
+        }
+
+        // Send the message to the tab
+        await chrome.tabs.sendMessage(tabId, message);
+    } catch (error) {
+        console.log('Attempting to inject content script...');
+        try {
+            chrome.scripting.executeScript({
+                target: { tabId },
+                files: ['content.js']
+            });
+            await chrome.tabs.sendMessage(tabId, message);
+        } catch (injectError) {
+            console.warn(`Failed to inject content script or send message to tab ${tabId}:`, injectError);
+        }
+    }
+}
+
+// Event: Tab activated
+chrome.tabs.onActivated.addListener(async (activeInfo) => {
+    const tab = await chrome.tabs.get(activeInfo.tabId);
+    if (tab && tab.url) {
+        await handleTabUpdate(tab.id, tab.url);
+    }
+});
+
+// Event: Tab updated
+chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
+    if (changeInfo.url) {
+        await handleTabUpdate(tabId, changeInfo.url);
+    }
+});
+
+// Event: Tab created
+chrome.tabs.onCreated.addListener(async (tab) => {
+    if (tab && tab.url) {
+        await handleTabUpdate(tab.id, tab.url);
     }
 });
 
@@ -46,7 +91,6 @@ chrome.tabs.onActivated.addListener(async (activeInfo) => {
 chrome.storage.local.get('isEnabled', async (data) => {
     isEnabled = data.isEnabled || false;
     updateIcon();
-
     if (isEnabled) {
         await enableHeaderInjection();
     }
@@ -55,58 +99,31 @@ chrome.storage.local.get('isEnabled', async (data) => {
 // Toggle when icon is clicked
 chrome.action.onClicked.addListener(async (tab) => {
     isEnabled = !isEnabled;
-    chrome.storage.local.set({isEnabled});
+    chrome.storage.local.set({ isEnabled });
     updateIcon();
 
     if (isEnabled) {
         await enableHeaderInjection();
     } else {
         await disableHeaderInjection();
+
+        // Notify all tabs to update the indicator
+        const tabs = await chrome.tabs.query({});
+        for (const t of tabs) {
+            try {
+                await chrome.tabs.sendMessage(t.id, { isEnabled: false });
+            } catch (error) {
+                console.info(`Failed to send message to tab ${t.id}:`, error);
+            }
+        }
     }
 
-    // Improved message sending with proper error handling
-    try {
-        await sendMessageToActiveTab({isEnabled});
-    } catch (error) {
-        console.error('Failed to send message:', error);
+    if (tab && tab.id) {
+        await sendMessageToTab(tab.id, { isEnabled });
     }
 });
 
-function isValidUrl(url) {
-    try {
-        const parsed = new URL(url);
-        return parsed.protocol === 'http:' || parsed.protocol === 'https:';
-    } catch {
-        return false;
-    }
-}
-
-async function sendMessageToActiveTab(message) {
-    const [tab] = await chrome.tabs.query({active: true, currentWindow: true});
-
-    if (!tab || !tab.id || !isValidUrl(tab.url)) {
-        console.log('Skipping non-web page:', tab?.url);
-        return;
-    }
-
-    try {
-        await chrome.tabs.sendMessage(tab.id, message);
-    } catch (error) {
-        console.log('Attempting to inject content script...');
-        try {
-            if (/^https:\/\/.*\.landonline\.govt\.nz\//.test(tab.url)) {
-                chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    files: ['content.js']
-                });
-                await chrome.tabs.sendMessage(tab.id, message);
-            }
-        } catch (injectError) {
-            console.error('Failed to inject content script:', injectError);
-        }
-    }
-}
-
+// Utility: Enable header injection
 async function enableHeaderInjection() {
     try {
         await chrome.declarativeNetRequest.updateDynamicRules({
@@ -114,7 +131,7 @@ async function enableHeaderInjection() {
             removeRuleIds: [RULE_ID]
         });
     } catch (error) {
-        console.error('Error enabling header injection:', error);
+        console.warn('Error enabling header injection:', error);
     }
 }
 
@@ -124,7 +141,7 @@ async function disableHeaderInjection() {
             removeRuleIds: [RULE_ID]
         });
     } catch (error) {
-        console.error('Error disabling header injection:', error);
+        console.warn('Error disabling header injection:', error);
     }
 }
 
