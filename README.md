@@ -6,6 +6,28 @@ When switched on, it adds the header `Landonline-DB: postgres` to requests sent 
 
 The extension also shows a banner on Landonline pages. The banner reports what was **actually sent** on the page's API requests, not just whether the extension is switched on. Green means the header really went out.
 
+## What's new in 1.2.0
+
+![Know which backend you're testing](docs/images/overview-verified.png)
+
+**The banner only turns green when the header was really sent.** Before, it showed green whenever the extension was switched on, even if the header had stopped being added.
+
+![Postgres or Informix, your choice](docs/images/overview-switch.png)
+
+**Switch from a popup.** Click the extension icon to see which backend you're on and switch. Switching logs you out of your open Landonline tabs, because Postgres and Informix have separate logins. The popup tells you how many tabs that affects first. [More about switching](#switching-between-postgres-and-informix).
+
+![Three states, no guessing](docs/images/overview-states.png)
+
+**Amber, green or red.** Amber means Postgres is on but nothing has been checked yet. Green means every API request carried the header. Red means at least one didn't. [What each banner means](#the-banner).
+
+![Red means don't trust this page](docs/images/overview-missing.png)
+
+**Red means don't trust the page.** If an API request goes out without the header, the banner turns red and names the request. It stays red until you reload.
+
+![Back to Informix after a restart](docs/images/overview-restart.png)
+
+**Informix is the default again after a restart.** When Chrome restarts or the extension updates, you're switched back to Informix and logged out. Switch to Postgres again from the popup if you need it. [Details](#back-to-informix-when-chrome-restarts).
+
 ## Install
 
 1. Get the code: clone this repository, or download it and unzip it.

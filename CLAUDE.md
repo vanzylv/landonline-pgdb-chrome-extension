@@ -78,5 +78,5 @@ Browser gotchas:
 
 - Bump `version` in `manifest.json` for each release.
 - Conventional commit messages (`feat:`, `fix:`, `chore:`).
-- Update `README.md` when behaviour changes. Screenshots in `docs/images/` are supplied by the user, so don't generate them.
+- Update `README.md` when behaviour changes. Screenshots in `docs/images/` are supplied by the user; only add generated ones (like the `overview-*.png` slides) when asked.
 - Add or adjust tests in `test/` with any behaviour change, and run `npm test` before committing.
