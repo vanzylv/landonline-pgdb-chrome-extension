@@ -1,13 +1,14 @@
 {
   "manifest_version": 3,
   "name": "Landonline-DB Header",
-  "version": "1.1.1",
+  "version": "1.2.0",
   "description": "Toggle 'landonline-db: postgres' header on requests",
   "permissions": [
     "declarativeNetRequest",
     "declarativeNetRequestWithHostAccess",
     "storage",
-    "activeTab",
+    "webRequest",
+    "cookies",
     "scripting"
   ],
   "host_permissions": [
@@ -24,7 +25,8 @@
       "48": "icons/dboff48.png",
       "128": "icons/dboff128.png"
     },
-    "default_title": "Landonline-DB Header Toggle"
+    "default_title": "Landonline-DB Header",
+    "default_popup": "popup/popup.html"
   },
   "content_scripts": [
     {

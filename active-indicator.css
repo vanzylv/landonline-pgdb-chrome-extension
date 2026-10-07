@@ -25,3 +25,14 @@
     50% { box-shadow: 0 8px 16px rgba(0,0,0,0.3); transform: translateX(-50%) scale(1.04);}
     100% { box-shadow: 0 4px 8px rgba(0,0,0,0.2); transform: translateX(-50%) scale(1);}
 }
+#landonline-db-indicator.pending {
+    background-color: #F9A825;
+    animation: fadeIn 0.5s;
+}
+
+#landonline-db-indicator.missing {
+    background-color: #C62828;
+    font-weight: bold;
+    max-width: 90vw;
+    overflow-wrap: anywhere;
+}
