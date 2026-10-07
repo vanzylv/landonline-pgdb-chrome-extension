@@ -69,19 +69,24 @@ chrome.storage.onChanged.addListener((changes, area) => {
     }
 });
 
-// After install/update/reload, content scripts in already-open tabs are orphaned.
-// Re-inject so their indicator keeps tracking state.
-chrome.runtime.onInstalled.addListener(async () => {
+// After install, update, reload or re-enable, content scripts in already-open tabs
+// belong to the previous extension instance and stop receiving state changes.
+// Inject into open tabs; content.js skips itself where a live copy is already running.
+async function injectIntoOpenTabs() {
     const tabs = await chrome.tabs.query({ url: CONTENT_SCRIPT_MATCHES });
     for (const tab of tabs) {
         try {
-            await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['active-indicator.css'] });
-            await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+            const [result] = await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+            if (result?.result === 'initialized') {
+                await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['active-indicator.css'] });
+            }
         } catch (error) {
             console.info(`Failed to inject content script into tab ${tab.id}:`, error);
         }
     }
-});
+}
 
-// Re-sync rule and icon from storage whenever the service worker starts.
+// Whenever the service worker starts: re-sync rule and icon from storage, and make
+// sure every open Landonline tab has a live indicator.
 getIsEnabled().then(applyState);
+injectIntoOpenTabs();

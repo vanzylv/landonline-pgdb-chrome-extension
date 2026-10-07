@@ -6,6 +6,15 @@
         return;
     }
 
+    // Skip if a live copy of this script is already running in the page.
+    // A copy left over from a disabled/reloaded extension reports itself dead,
+    // so a fresh injection takes over from it.
+    if (window.__landonlineDbAlive && window.__landonlineDbAlive()) {
+        return 'skipped';
+    }
+    const isAlive = () => !!chrome.runtime?.id;
+    window.__landonlineDbAlive = isAlive;
+
     // Create the visual indicator element
     const createIndicator = () => {
         const existingIndicator = document.getElementById('landonline-db-indicator');
@@ -69,5 +78,17 @@
         subtree: true
     });
 
+    // Once the extension is disabled, reloaded or removed this script can no longer
+    // hear state changes, so remove the indicator rather than leave it stale.
+    const aliveCheck = setInterval(() => {
+        if (!isAlive()) {
+            clearInterval(aliveCheck);
+            observer.disconnect();
+            indicator.remove();
+            console.log('[Landonline-DB] Extension unloaded, indicator removed');
+        }
+    }, 1000);
+
     console.log('[Landonline-DB] Content script initialized');
+    return 'initialized';
 })();
