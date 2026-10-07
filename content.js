@@ -22,7 +22,7 @@
     };
 
     // Initialize the indicator
-    const indicator = createIndicator();
+    let indicator = createIndicator();
 
     // Handle state updates from background
     const handleStateUpdate = (isEnabled) => {
@@ -39,13 +39,11 @@
         }
     };
 
-    // Message listener for state changes
-    chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-        if (message.hasOwnProperty('isEnabled')) {
-            handleStateUpdate(message.isEnabled);
-            sendResponse({ success: true });
+    // Follow the same stored state the background uses for the header rule
+    chrome.storage.onChanged.addListener((changes, area) => {
+        if (area === 'local' && changes.isEnabled) {
+            handleStateUpdate(changes.isEnabled.newValue || false);
         }
-        return true; // Keep message channel open for sendResponse
     });
 
     // Get initial state
@@ -58,7 +56,7 @@
     const observer = new MutationObserver((mutations) => {
         // Recreate indicator if it was removed
         if (!document.getElementById('landonline-db-indicator')) {
-            const newIndicator = createIndicator();
+            indicator = createIndicator();
             chrome.storage.local.get('isEnabled', (data) => {
                 handleStateUpdate(data.isEnabled || false);
             });

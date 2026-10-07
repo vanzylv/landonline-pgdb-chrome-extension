@@ -1,7 +1,8 @@
 const RULE_ID = 1;
-let isEnabled = false;
+const CONTENT_SCRIPT_MATCHES = ['https://*.landonline.govt.nz/*', 'https://*.linz.govt.nz/*'];
 
-// Rule definition for declarativeNetRequest
+// Rule definition for declarativeNetRequest.
+// requestDomains also matches subdomains and ignores the port.
 const rule = {
     id: RULE_ID,
     priority: 1,
@@ -13,139 +14,34 @@ const rule = {
         ]
     },
     condition: {
-        urlFilter: 'https://*.govt.nz/*',
-        resourceTypes: ['main_frame', 'xmlhttprequest']
+        requestDomains: ['landonline.govt.nz', 'linz.govt.nz'],
+        resourceTypes: [
+            'main_frame', 'sub_frame', 'xmlhttprequest', 'websocket', 'script',
+            'stylesheet', 'image', 'font', 'media', 'ping', 'other'
+        ]
     }
 };
 
-// Utility: Check if a URL matches the required pattern
-function matchesLandonlineUrl(url) {
-    return /^https:\/\/.*\.(landonline|linz)\.govt\.nz\//.test(url);
+// chrome.storage.local 'isEnabled' is the single source of truth. The header rule,
+// the toolbar icon and the in-page indicator are all derived from it, so they
+// cannot drift apart.
+async function getIsEnabled() {
+    const { isEnabled } = await chrome.storage.local.get('isEnabled');
+    return isEnabled || false;
 }
 
-// Utility: Handle tab updates (activated, updated, or created)
-async function handleTabUpdate(tabId, url) {
-    if (matchesLandonlineUrl(url)) {
-        const { isEnabled } = await chrome.storage.local.get('isEnabled');
-        if (isEnabled) {
-            await enableHeaderInjection();
-            await sendMessageToTab(tabId, { isEnabled });
-        } else {
-            await disableHeaderInjection();
-            await sendMessageToTab(tabId, { isEnabled: false });
-        }
-    } else {
-        await disableHeaderInjection();
-        chrome.action.setTitle({ title: 'Landonline-DB Header: OFF' });
-    }
-}
-
-async function sendMessageToTab(tabId, message) {
+async function applyState(isEnabled) {
     try {
-        // Check if the tab exists
-        const tab = await chrome.tabs.get(tabId);
-        if (!tab) {
-            console.warn(`Tab with ID ${tabId} does not exist.`);
-            return;
-        }
-
-        // Send the message to the tab
-        await chrome.tabs.sendMessage(tabId, message);
+        await chrome.declarativeNetRequest.updateDynamicRules(
+            isEnabled ? { addRules: [rule], removeRuleIds: [RULE_ID] } : { removeRuleIds: [RULE_ID] }
+        );
     } catch (error) {
-        console.log('Attempting to inject content script...');
-        try {
-            chrome.scripting.executeScript({
-                target: { tabId },
-                files: ['content.js']
-            });
-            await chrome.tabs.sendMessage(tabId, message);
-        } catch (injectError) {
-            console.warn(`Failed to inject content script or send message to tab ${tabId}:`, injectError);
-        }
+        console.warn('Error updating header injection rule:', error);
     }
+    updateIcon(isEnabled);
 }
 
-// Event: Tab activated
-chrome.tabs.onActivated.addListener(async (activeInfo) => {
-    const tab = await chrome.tabs.get(activeInfo.tabId);
-    if (tab && tab.url) {
-        await handleTabUpdate(tab.id, tab.url);
-    }
-});
-
-// Event: Tab updated
-chrome.tabs.onUpdated.addListener(async (tabId, changeInfo, tab) => {
-    if (changeInfo.url) {
-        await handleTabUpdate(tabId, changeInfo.url);
-    }
-});
-
-// Event: Tab created
-chrome.tabs.onCreated.addListener(async (tab) => {
-    if (tab && tab.url) {
-        await handleTabUpdate(tab.id, tab.url);
-    }
-});
-
-// Load saved state
-chrome.storage.local.get('isEnabled', async (data) => {
-    isEnabled = data.isEnabled || false;
-    updateIcon();
-    if (isEnabled) {
-        await enableHeaderInjection();
-    }
-});
-
-// Toggle when icon is clicked
-chrome.action.onClicked.addListener(async (tab) => {
-    isEnabled = !isEnabled;
-    chrome.storage.local.set({ isEnabled });
-    updateIcon();
-
-    if (isEnabled) {
-        await enableHeaderInjection();
-    } else {
-        await disableHeaderInjection();
-
-        // Notify all tabs to update the indicator
-        const tabs = await chrome.tabs.query({});
-        for (const t of tabs) {
-            try {
-                await chrome.tabs.sendMessage(t.id, { isEnabled: false });
-            } catch (error) {
-                console.info(`Failed to send message to tab ${t.id}:`, error);
-            }
-        }
-    }
-
-    if (tab && tab.id) {
-        await sendMessageToTab(tab.id, { isEnabled });
-    }
-});
-
-// Utility: Enable header injection
-async function enableHeaderInjection() {
-    try {
-        await chrome.declarativeNetRequest.updateDynamicRules({
-            addRules: [rule],
-            removeRuleIds: [RULE_ID]
-        });
-    } catch (error) {
-        console.warn('Error enabling header injection:', error);
-    }
-}
-
-async function disableHeaderInjection() {
-    try {
-        await chrome.declarativeNetRequest.updateDynamicRules({
-            removeRuleIds: [RULE_ID]
-        });
-    } catch (error) {
-        console.warn('Error disabling header injection:', error);
-    }
-}
-
-function updateIcon() {
+function updateIcon(isEnabled) {
     chrome.action.setIcon({
         path: {
             "16": isEnabled ? 'icons/db16.png' : 'icons/dboff16.png',
@@ -158,3 +54,34 @@ function updateIcon() {
         title: isEnabled ? 'Landonline-DB Header: ON' : 'Landonline-DB Header: OFF'
     });
 }
+
+// Toggle when icon is clicked. Read from storage rather than memory, because the
+// service worker may have just been woken by this click.
+chrome.action.onClicked.addListener(async () => {
+    await chrome.storage.local.set({ isEnabled: !(await getIsEnabled()) });
+});
+
+// Any change to the stored state (icon click, devtools) updates the rule.
+// Content scripts listen to the same change to update the indicator.
+chrome.storage.onChanged.addListener((changes, area) => {
+    if (area === 'local' && changes.isEnabled) {
+        applyState(changes.isEnabled.newValue || false);
+    }
+});
+
+// After install/update/reload, content scripts in already-open tabs are orphaned.
+// Re-inject so their indicator keeps tracking state.
+chrome.runtime.onInstalled.addListener(async () => {
+    const tabs = await chrome.tabs.query({ url: CONTENT_SCRIPT_MATCHES });
+    for (const tab of tabs) {
+        try {
+            await chrome.scripting.insertCSS({ target: { tabId: tab.id }, files: ['active-indicator.css'] });
+            await chrome.scripting.executeScript({ target: { tabId: tab.id }, files: ['content.js'] });
+        } catch (error) {
+            console.info(`Failed to inject content script into tab ${tab.id}:`, error);
+        }
+    }
+});
+
+// Re-sync rule and icon from storage whenever the service worker starts.
+getIsEnabled().then(applyState);
