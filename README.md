@@ -129,6 +129,23 @@ The icon itself is coloured when the extension is on, and grey when it's off. Ch
   - If the extension has been disabled, reloaded or removed, it removes the banner instead of leaving it showing.
 - **`popup/`** is the switch popup. It flips `isEnabled` in storage, and `background.js` does the rest.
 
+### Running the tests
+
+The tests load the extension into Chromium and point every Landonline hostname at a local mock server, so they don't touch real systems.
+
+```sh
+npm install
+npm run test:install-browser   # once: downloads Playwright's Chromium
+npm test
+```
+
+They cover:
+- the verified banner;
+- the forced re-login on switch;
+- the popup.
+
+Google Chrome itself can't be used: it no longer allows loading an unpacked extension from the command line. See `CLAUDE.md` for details on the test setup.
+
 ### Permissions
 
 | Permission | Why |

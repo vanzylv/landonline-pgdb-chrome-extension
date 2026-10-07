@@ -1,0 +1,12 @@
+{
+  "name": "landonline-pgdb-chrome-extension",
+  "private": true,
+  "description": "Chrome extension that adds the Landonline-DB: postgres header and verifies it was sent",
+  "scripts": {
+    "test": "node --test \"test/*.test.js\"",
+    "test:install-browser": "playwright install chromium"
+  },
+  "devDependencies": {
+    "playwright": "1.63.0"
+  }
+}
