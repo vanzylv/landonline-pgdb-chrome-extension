@@ -1,19 +1,20 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <link rel="stylesheet" href="styles.css">
+    <meta charset="utf-8">
+    <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-<div class="popup-container">
+<main>
     <h1>Landonline-DB Header</h1>
-    <div class="toggle-container">
-        <span id="status-text">OFF</span>
-        <label class="switch">
-            <input type="checkbox" id="toggle-switch">
-            <span class="slider round"></span>
-        </label>
+    <p class="current">Currently: <strong id="current"></strong></p>
+    <p id="tab-status" class="tab-status" hidden></p>
+    <p id="warning" class="warning" hidden></p>
+    <div class="buttons">
+        <button id="cancel" type="button">Cancel</button>
+        <button id="switch" type="button" class="primary"></button>
     </div>
-</div>
+</main>
 <script src="popup.js"></script>
 </body>
 </html>

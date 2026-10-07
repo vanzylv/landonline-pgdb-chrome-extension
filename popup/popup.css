@@ -1,0 +1,98 @@
+:root {
+    --bg: #ffffff;
+    --fg: #1f1f1f;
+    --muted: #5f6368;
+    --border: #dadce0;
+    --primary: #1a73e8;
+    --primary-fg: #ffffff;
+    --warning-bg: #fef7e0;
+    --warning-fg: #7a4f01;
+    --verified: #2e7d32;
+    --pending: #b26a00;
+    --missing: #c62828;
+}
+
+@media (prefers-color-scheme: dark) {
+    :root {
+        --bg: #202124;
+        --fg: #e8eaed;
+        --muted: #9aa0a6;
+        --border: #3c4043;
+        --primary: #8ab4f8;
+        --primary-fg: #202124;
+        --warning-bg: #3c2f00;
+        --warning-fg: #fdd663;
+        --verified: #81c995;
+        --pending: #fdd663;
+        --missing: #f28b82;
+    }
+}
+
+body {
+    margin: 0;
+    width: 300px;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: Arial, sans-serif;
+    font-size: 13px;
+}
+
+main {
+    padding: 14px 16px;
+}
+
+h1 {
+    margin: 0 0 10px;
+    font-size: 15px;
+}
+
+p {
+    margin: 0 0 10px;
+}
+
+.current {
+    color: var(--muted);
+}
+
+.current strong {
+    color: var(--fg);
+}
+
+.tab-status.verified { color: var(--verified); }
+.tab-status.pending { color: var(--pending); }
+.tab-status.missing { color: var(--missing); font-weight: bold; }
+
+.warning {
+    padding: 8px 10px;
+    border-radius: 4px;
+    background: var(--warning-bg);
+    color: var(--warning-fg);
+}
+
+.buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+button {
+    padding: 6px 14px;
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    cursor: pointer;
+}
+
+button.primary {
+    border-color: var(--primary);
+    background: var(--primary);
+    color: var(--primary-fg);
+}
+
+button:disabled {
+    opacity: 0.6;
+    cursor: default;
+}
