@@ -4,7 +4,8 @@
   "description": "Chrome extension that adds the Landonline-DB: postgres header and verifies it was sent",
   "scripts": {
     "test": "node --test \"test/*.test.js\"",
-    "test:install-browser": "playwright install chromium"
+    "test:install-browser": "playwright install chromium",
+    "screenshots": "node docs/screenshots/build.js"
   },
   "devDependencies": {
     "playwright": "1.63.0"

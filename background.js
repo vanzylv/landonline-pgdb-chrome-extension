@@ -220,9 +220,10 @@ chrome.tabs.onRemoved.addListener(async (tabId) => {
 });
 
 // The content script polls this to draw the indicator; if the extension is gone the
-// poll fails and the content script removes the indicator. The popup passes tabId.
+// poll fails and the content script removes the indicator. The popup asks about a
+// specific tab by passing tabId; content scripts ask about their own tab.
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-    const tabId = sender.tab ? sender.tab.id : message?.tabId;
+    const tabId = message?.tabId ?? sender.tab?.id;
     if (message?.type === 'status' && tabId !== undefined) {
         loaded.then(() => sendResponse(tabStatus(tabId)));
         return true;

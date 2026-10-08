@@ -6,6 +6,17 @@ When switched on, it adds the header `Landonline-DB: postgres` to requests sent 
 
 The extension also shows a banner on Landonline pages. The banner reports what was **actually sent** on the page's API requests, not just whether the extension is switched on. Green means the header really went out.
 
+## What's new in 1.2.1
+
+![Never blocks a button](docs/images/overview-move.png)
+
+**The banner stays out of your way**, after feedback that it covered buttons near the top of the page. It keeps its colours and size so it's still obvious, but:
+- **Shorter text:** `Connected to Postgres (14)`, where the number is how many API requests were checked, and `NOT on Postgres – reload`. The failing address is in the popup.
+- **Clicks go through it.** If the banner sits over a button, clicking still hits the button.
+- **Move it:** drag it by the ⋮⋮ grip on its left. It remembers where you put it for each site, and it can't be dragged out of the window.
+- **Reset:** open the popup on that site and click **Reset banner position** to put it back at the top centre.
+- **No more pulsing:** the banner stays still.
+
 ## What's new in 1.2.0
 
 ![Know which backend you're testing](docs/images/overview-verified.png)
@@ -87,17 +98,19 @@ Closing a window or tab doesn't change anything. All windows and tabs in a Chrom
 
 ## The banner
 
-When the extension is on, a banner at the top of each Landonline page shows whether the header was actually sent on that page's API requests.
+When the extension is on, a banner at the top of each Landonline page shows whether the header was actually sent on that page's API requests. The popup has the details: how many API requests were checked, and the address of the last failing one.
 
 | Banner | Meaning | What to do |
 |---|---|---|
-| ![Waiting](docs/images/banner-pending.png) | **Amber – waiting for first API request.** Postgres is switched on, but the page hasn't made an API request yet, so nothing has been checked. | Carry on using the app. It turns green after the first API request. |
-| ![Verified](docs/images/banner-verified.png) | **Green – Connected to Postgres.** Every API request from this page so far carried the header. | Nothing. You're testing against Postgres. |
-| ![Missing](docs/images/banner-missing.png) | **Red – NOT on Postgres.** At least one API request from this page went out **without** the header. It shows how many, and the address of the last one. | Don't trust results from this page. Reload the page. If it turns red again, report it with the address shown. |
-| *(red)* | **Red – Header OFF but still sent.** The extension is switched off, but an API request still carried the header. | Don't trust results from this page. Report it. |
+| ![Waiting](docs/images/banner-pending.png) | **Amber – `Postgres header ON – waiting for first API request`.** Postgres is switched on, but the page hasn't made an API request yet, so nothing has been checked. | Carry on using the app. It turns green after the first API request. |
+| ![Verified](docs/images/banner-verified.png) | **Green – `Connected to Postgres (N)`.** Every API request from this page so far carried the header. N is how many were checked; it goes up as you use the app. | Nothing. You're testing against Postgres. |
+| ![Missing](docs/images/banner-missing.png) | **Red – `NOT on Postgres – reload`.** At least one API request from this page went out **without** the header. The popup shows how many, and the address of the last one. | Don't trust results from this page. Reload the page. If it turns red again, report it with the address from the popup. |
+| *(red)* | **Red – `Header sent while OFF – reload`.** The extension is switched off, but an API request still carried the header. | Don't trust results from this page. Report it. |
 | *(no banner)* | The extension is switched off, so you're on Informix. Or the extension isn't running (disabled or removed). | Nothing, unless you meant to test Postgres. |
 
 How the banner behaves:
+- **It never blocks the page.** Clicks go straight through it to whatever is underneath, except on the ⋮⋮ grip.
+- **You can move it.** Drag the ⋮⋮ grip. The position is remembered per site (for example, all your plan-gen tabs) and kept inside the window. To put it back at the top centre, open the popup on that site and click **Reset banner position**.
 - **A red banner stays red** until the page is reloaded or you go to another page, even if later requests are fine.
 - **Only API requests are checked** (XHR/fetch from the page). Page loads, images and scripts also get the header, but they don't change the banner.
 - **Requests made by an app's own service worker aren't counted.** Those can't be tied to a tab.
@@ -167,6 +180,16 @@ They cover:
 - the popup.
 
 Google Chrome itself can't be used: it no longer allows loading an unpacked extension from the command line. See `CLAUDE.md` for details on the test setup.
+
+### Screenshots
+
+The banner images and overview slides in `docs/images/`, and the Chrome Web Store screenshots in `dist/store-screenshots/`, are generated from the real extension:
+
+```sh
+npm run screenshots
+```
+
+The slides are laid out in `docs/screenshots/slides.html`.
 
 ### Permissions
 

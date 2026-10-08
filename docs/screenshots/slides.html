@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<!-- Overview / Chrome Web Store slides (1280x800). Rendered by build.js, which passes
+     the folder of freshly captured extension UI parts as ?parts=<file URL>. -->
+<style>
+  :root {
+    --bg: #eef2f6;
+    --ink: #17212b;
+    --muted: #4a5866;
+    --accent: #1a73e8;
+    --chrome: #dfe3e8;
+    --chrome-2: #f1f3f4;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; width: 1280px; height: 800px; overflow: hidden; }
+  body {
+    background: var(--bg);
+    font-family: "Noto Sans", "Ubuntu Sans", "Liberation Sans", Arial, sans-serif;
+    color: var(--ink);
+    display: grid;
+    grid-template-columns: 380px 740px;
+    align-items: center;
+    gap: 44px;
+    padding: 0 58px;
+  }
+  .copy .step { font-size: 15px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 14px; }
+  .copy h1 { font-size: 40px; line-height: 1.15; margin: 0 0 20px; letter-spacing: -0.01em; }
+  .copy p { font-size: 20px; line-height: 1.5; color: var(--muted); margin: 0; }
+
+  /* simplified browser window */
+  .browser { width: 740px; height: 560px; border-radius: 12px; background: #fff; box-shadow: 0 24px 60px rgba(23,33,43,.18), 0 2px 6px rgba(23,33,43,.08); overflow: hidden; position: relative; }
+  .tabs { height: 42px; background: var(--chrome); display: flex; align-items: flex-end; padding: 0 12px; gap: 6px; }
+  .tab { height: 34px; padding: 0 16px; border-radius: 9px 9px 0 0; font-size: 13px; color: #3c4043; display: flex; align-items: center; gap: 8px; width: 210px; }
+  .tab.active { background: var(--chrome-2); }
+  .tab::before { content: ""; width: 14px; height: 14px; border-radius: 50%; background: #9aa3ad; flex: none; }
+  .bar { height: 46px; background: var(--chrome-2); display: flex; align-items: center; padding: 0 12px; gap: 12px; border-bottom: 1px solid #dadce0; }
+  .url { flex: 1; height: 32px; border-radius: 16px; background: #fff; display: flex; align-items: center; padding: 0 16px; font-size: 14px; color: #3c4043; }
+  .url b { font-weight: 400; color: #5f6368; }
+  .ext { position: relative; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; }
+  .ext.pressed { background: #d3d7dc; }
+  .ext img { width: 20px; height: 20px; }
+  .badge { position: absolute; right: -3px; bottom: -1px; min-width: 16px; height: 15px; padding: 0 3px; border-radius: 4px; color: #fff; font: 700 11px/15px Arial, sans-serif; text-align: center; }
+  .badge.ok { background: #2e7d32; }
+  .badge.bad { background: #c62828; }
+  .puzzle, .menu { width: 18px; height: 18px; border-radius: 4px; background: #c4c9cf; }
+  .menu { width: 4px; border-radius: 2px; margin-right: 6px; }
+
+  /* neutral placeholder page */
+  .page { position: absolute; top: 88px; left: 0; right: 0; bottom: 0; padding: 70px 40px 0; }
+  .page .h { width: 260px; height: 22px; border-radius: 6px; background: #d5dbe1; margin-bottom: 22px; }
+  .page .row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+  .page .card { height: 110px; border-radius: 10px; background: #f0f3f6; border: 1px solid #e3e8ed; }
+  .page .line { height: 12px; border-radius: 6px; background: #e6eaee; margin-bottom: 12px; }
+  .page .buttons { position: absolute; top: 12px; left: 0; right: 0; display: flex; justify-content: center; gap: 10px; }
+  .page .buttons span { height: 32px; width: 96px; border-radius: 6px; background: #3b6fb6; opacity: .85; }
+  .banner { position: absolute; top: 93px; left: 50%; transform: translateX(-50%); box-shadow: 0 4px 8px rgba(0,0,0,.2); border-radius: 5px; }
+  .banner.moved { transform: none; }
+  .ghost { position: absolute; top: 93px; left: 50%; transform: translateX(-50%); border: 2px dashed #9aa3ad; border-radius: 5px; }
+  .arrow { position: absolute; inset: 0; pointer-events: none; }
+  .popup { position: absolute; top: 84px; right: 46px; border-radius: 8px; box-shadow: 0 10px 28px rgba(0,0,0,.25), 0 0 0 1px rgba(0,0,0,.06); overflow: hidden; }
+
+  /* banner states slide */
+  .states { display: grid; gap: 30px; }
+  .state { display: grid; gap: 10px; }
+  .state img { border-radius: 5px; box-shadow: 0 4px 8px rgba(0,0,0,.2); justify-self: start; }
+  .state span { font-size: 18px; color: var(--muted); }
+  .state span b { color: var(--ink); }
+</style>
+</head>
+<body>
+<div class="copy">
+  <div class="step" id="step"></div>
+  <h1 id="title"></h1>
+  <p id="text"></p>
+</div>
+<div id="visual"></div>
+
+<script>
+const params = new URLSearchParams(location.search);
+const PARTS = params.get('parts');
+const part = (name) => `${PARTS}/${name}.png`;
+const ICON_ON = '../../icons/db48.png', ICON_OFF = '../../icons/dboff48.png';
+
+function browser({ icon, badge, pressed, banner, popup, appButtons, moved }) {
+  return `
+  <div class="browser">
+    <div class="tabs"><div class="tab active">Landonline</div><div class="tab">Landonline</div></div>
+    <div class="bar">
+      <div class="url"><b>https://</b>app.landonline.govt.nz</div>
+      <div class="ext ${pressed ? 'pressed' : ''}"><img src="${icon}">${badge ? `<span class="badge ${badge === '!' ? 'bad' : 'ok'}">${badge}</span>` : ''}</div>
+      <div class="puzzle"></div><div class="menu"></div>
+    </div>
+    <div class="page">
+      ${appButtons ? '<div class="buttons"><span></span><span></span><span></span><span></span></div>' : ''}
+      <div class="h"></div>
+      <div class="row"><div class="card"></div><div class="card"></div><div class="card"></div></div>
+      <div class="line" style="width:92%"></div><div class="line" style="width:84%"></div><div class="line" style="width:88%"></div>
+      <div class="line" style="width:60%"></div>
+    </div>
+    ${moved ? moved : banner ? `<img class="banner" src="${part(banner)}">` : ''}
+    ${popup ? `<img class="popup" src="${part(popup)}">` : ''}
+  </div>`;
+}
+
+const slides = {
+  verified: {
+    step: 'Landonline-DB Header',
+    title: 'Know which backend you’re testing',
+    text: 'The banner turns green only when your page’s API requests really carried the Postgres header, so you can trust what you’re testing.',
+    visual: () => browser({ icon: ICON_ON, badge: '✓', banner: 'banner-verified' }),
+  },
+  switch: {
+    step: 'Switch in one click',
+    title: 'Postgres or Informix, your choice',
+    text: 'Click the icon to see the current backend and switch. You’re warned first, because switching logs out your open Landonline tabs.',
+    visual: () => browser({ icon: ICON_ON, badge: '✓', pressed: true, banner: 'banner-verified', popup: 'popup-on' }),
+  },
+  states: {
+    step: 'Clear status',
+    title: 'Three states, no guessing',
+    text: 'The banner shows what was actually sent on this page’s API requests, not just whether the extension is switched on.',
+    visual: () => `<div class="states">
+      <div class="state"><img src="${part('banner-pending')}"><span><b>Waiting</b> – Postgres is on; no API request checked yet.</span></div>
+      <div class="state"><img src="${part('banner-verified')}"><span><b>Verified</b> – every API request carried the header (14 so far).</span></div>
+      <div class="state"><img src="${part('banner-missing')}"><span><b>Not on Postgres</b> – a request went out without it.</span></div>
+    </div>`,
+  },
+  missing: {
+    step: 'Never a false green',
+    title: 'Red means don’t trust this page',
+    text: 'If any API request goes out without the header, the banner turns red and stays red until you reload. The popup shows which request.',
+    visual: () => browser({ icon: ICON_ON, badge: '!', banner: 'banner-missing' }),
+  },
+  move: {
+    step: 'Out of your way',
+    title: 'Never blocks a button',
+    text: 'Clicks go straight through the banner. Drag the ⋮⋮ grip to move it; it remembers the spot for each site.',
+    visual: () => browser({
+      icon: ICON_ON, badge: '✓', appButtons: true,
+      moved: `<div class="ghost" id="ghost"></div>
+        <svg class="arrow" viewBox="0 0 740 560"><defs><marker id="head" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0,0 L10,5 L0,10 z" fill="#5f6b78"/></marker></defs>
+          <path d="M 420 145 C 560 170, 600 330, 560 455" fill="none" stroke="#5f6b78" stroke-width="3" stroke-dasharray="8 7" marker-end="url(#head)"/></svg>
+        <img class="banner moved" id="moved" src="${part('banner-verified')}" style="left:470px;top:470px">`,
+    }),
+  },
+  restart: {
+    step: 'Safe by default',
+    title: 'Back to Informix after a restart',
+    text: 'Postgres is a deliberate test mode. When Chrome restarts or the extension updates, you’re switched back to Informix and logged out.',
+    visual: () => browser({ icon: ICON_OFF, pressed: true, popup: 'popup-off' }),
+  },
+};
+
+const s = slides[params.get('slide') || 'verified'];
+document.getElementById('step').textContent = s.step;
+document.getElementById('title').textContent = s.title;
+document.getElementById('text').textContent = s.text;
+document.getElementById('visual').innerHTML = s.visual();
+
+// Size the dashed "was here" outline to match the banner image
+const moved = document.getElementById('moved');
+if (moved) {
+  moved.addEventListener('load', () => {
+    const ghost = document.getElementById('ghost');
+    ghost.style.width = `${moved.naturalWidth}px`;
+    ghost.style.height = `${moved.naturalHeight}px`;
+  });
+}
+</script>
+</body>
+</html>

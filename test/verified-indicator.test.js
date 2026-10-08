@@ -12,7 +12,8 @@ async function indicator(page) {
         const el = all[0];
         if (!el) return { shown: false, count: 0 };
         const shown = getComputedStyle(el).display !== 'none';
-        return { shown, cls: el.className, text: shown ? el.textContent : '', bg: getComputedStyle(el).backgroundColor, count: all.length };
+        const label = el.querySelector('.ldb-label');
+        return { shown, cls: el.dataset.state, text: shown && label ? label.textContent : '', bg: getComputedStyle(el).backgroundColor, count: all.length };
     });
 }
 
@@ -26,6 +27,12 @@ const addRule = (ext) => ext.evaluate(() => chrome.declarativeNetRequest.updateS
         condition: { requestDomains: ['landonline.govt.nz'], resourceTypes: ['xmlhttprequest'] },
     }],
 }));
+
+// The details the popup shows for a tab (counts, failing URL)
+const tabStatus = (ext, page) => ext.evaluate(async (url) => {
+    const [tab] = await chrome.tabs.query({ url });
+    return chrome.runtime.sendMessage({ type: 'status', tabId: tab.id });
+}, page.url());
 
 const badge = (ext, page) => ext.evaluate(async (url) => {
     const [tab] = await chrome.tabs.query({ url });
@@ -49,14 +56,15 @@ test('verified indicator', async (t) => {
         await setEnabled(ext, true);
         const ind = await indicator(tab);
         assert.equal(ind.cls, 'pending');
-        assert.ok(!ind.text.startsWith('Connected'), ind.text);
+        assert.equal(ind.text, 'Postgres header ON – waiting for first API request');
     });
 
     await t.test('ON after API calls with header: green verified', async () => {
         await tab.evaluate(() => Promise.all([api(), xhr()]));
         const ind = await indicator(tab);
         assert.equal(ind.cls, 'verified');
-        assert.match(ind.text, /verified on 2 API requests/);
+        assert.equal(ind.text, 'Connected to Postgres (2)');
+        assert.equal((await tabStatus(ext, tab)).ok, 2);
         assert.equal(await badge(ext, tab), '✓');
         assert.equal(lastApiHeader(), 'postgres');
     });
@@ -67,7 +75,8 @@ test('verified indicator', async (t) => {
         const ind = await indicator(tab);
         assert.equal(lastApiHeader(), null, 'server should have received no header');
         assert.equal(ind.cls, 'missing');
-        assert.match(ind.text, /^NOT on Postgres.*\/api/);
+        assert.equal(ind.text, 'NOT on Postgres – reload');
+        assert.match((await tabStatus(ext, tab)).url, /\/api$/);
         assert.equal(ind.bg, 'rgb(198, 40, 40)');
         assert.equal(await badge(ext, tab), '!');
     });
@@ -82,7 +91,9 @@ test('verified indicator', async (t) => {
         await tab.reload();
         assert.equal((await indicator(tab)).cls, 'pending');
         await tab.evaluate(() => api());
-        assert.equal((await indicator(tab)).cls, 'verified');
+        const ind = await indicator(tab);
+        assert.equal(ind.cls, 'verified');
+        assert.equal(ind.text, 'Connected to Postgres (1)', 'count restarts with the page');
     });
 
     await t.test('service worker restart keeps the verified state', async () => {
@@ -92,7 +103,7 @@ test('verified indicator', async (t) => {
         await sleep(1500);
         const ind = await indicator(tab);
         assert.equal(ind.cls, 'verified');
-        assert.match(ind.text, /1 API request/);
+        assert.equal((await tabStatus(ext, tab)).ok, 1);
     });
 
     await t.test('OFF: hidden, badge cleared', async () => {
@@ -107,7 +118,7 @@ test('verified indicator', async (t) => {
         await tab.evaluate(() => api());
         const ind = await indicator(tab);
         assert.equal(ind.cls, 'missing');
-        assert.match(ind.text, /^Header OFF but still sent/);
+        assert.equal(ind.text, 'Header sent while OFF – reload');
         await removeRule(ext);
     });
 

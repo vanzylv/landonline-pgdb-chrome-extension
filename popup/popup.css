@@ -62,6 +62,23 @@ p {
 .tab-status.pending { color: var(--pending); }
 .tab-status.missing { color: var(--missing); font-weight: bold; }
 
+.tab-status {
+    overflow-wrap: anywhere;
+}
+
+.reset-row {
+    color: var(--muted);
+}
+
+button.link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--primary);
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .warning {
     padding: 8px 10px;
     border-radius: 4px;

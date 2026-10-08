@@ -1,3 +1,6 @@
+/* Banner at the top of Landonline pages. Deliberately big and bright so it's obvious
+   which backend you're on. Clicks pass through it to the page, except on the grip,
+   which is used to drag it somewhere else. */
 #landonline-db-indicator {
     display: none;
     position: fixed;
@@ -6,13 +9,40 @@
     transform: translateX(-50%);
     background-color: #4CAF50;
     color: white;
-    padding: 10px 20px;
+    padding: 10px 20px 10px 8px;
     border-radius: 5px;
     box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
-    z-index: 9999;
+    z-index: 2147483647;
+    pointer-events: none;
+    align-items: center;
+    gap: 6px;
     font-family: Arial, sans-serif;
     font-size: 16px;
-    animation: fadeIn 0.5s, pulse 2s infinite;
+    white-space: nowrap;
+    user-select: none;
+    animation: fadeIn 0.5s;
+}
+
+/* Moved by the user: positioned by left/top instead of centred */
+#landonline-db-indicator.moved {
+    transform: none;
+}
+
+#landonline-db-indicator .ldb-grip {
+    pointer-events: auto;
+    cursor: grab;
+    touch-action: none;
+    padding: 0 4px;
+    opacity: 0.8;
+    letter-spacing: -1px;
+}
+
+#landonline-db-indicator .ldb-grip:hover {
+    opacity: 1;
+}
+
+#landonline-db-indicator.dragging .ldb-grip {
+    cursor: grabbing;
 }
 
 @keyframes fadeIn {
@@ -20,19 +50,11 @@
     to { opacity: 1; }
 }
 
-@keyframes pulse {
-    0% { box-shadow: 0 4px 8px rgba(0,0,0,0.2); transform: translateX(-50%) scale(1);}
-    50% { box-shadow: 0 8px 16px rgba(0,0,0,0.3); transform: translateX(-50%) scale(1.04);}
-    100% { box-shadow: 0 4px 8px rgba(0,0,0,0.2); transform: translateX(-50%) scale(1);}
-}
 #landonline-db-indicator.pending {
     background-color: #F9A825;
-    animation: fadeIn 0.5s;
 }
 
 #landonline-db-indicator.missing {
     background-color: #C62828;
     font-weight: bold;
-    max-width: 90vw;
-    overflow-wrap: anywhere;
 }
