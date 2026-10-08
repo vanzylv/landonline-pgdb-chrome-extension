@@ -5,7 +5,9 @@ const LANDONLINE_URL = /^https:\/\/([^/]+\.)?(landonline|linz)\.govt\.nz(:\d+)?\
 
 const plural = (n, word) => `${n} ${word}${n === 1 ? '' : 's'}`;
 
-// Same wording as the in-page indicator (content.js)
+const POSITIONS_KEY = 'bannerPositions'; // per-site banner positions, saved by content.js
+
+// The details behind the in-page indicator (content.js), which keeps its text short
 function describeTabStatus(status) {
     switch (status?.status) {
         case 'verified':
@@ -13,9 +15,9 @@ function describeTabStatus(status) {
         case 'pending':
             return ['pending', 'This tab: waiting for first API request'];
         case 'missing':
-            return ['missing', `This tab: header missing on ${plural(status.wrong, 'API request')}`];
+            return ['missing', `This tab: header missing on ${plural(status.wrong, 'API request')} (last: ${status.url})`];
         case 'unexpected':
-            return ['missing', `This tab: header still sent on ${plural(status.wrong, 'API request')}`];
+            return ['missing', `This tab: header still sent on ${plural(status.wrong, 'API request')} (last: ${status.url})`];
         default:
             return null;
     }
@@ -41,6 +43,7 @@ async function init() {
         } catch (error) {
             console.info('No tab status:', error);
         }
+        await showResetPosition(new URL(activeTab.url).hostname);
     }
 
     const loginTabs = await chrome.tabs.query({ url: LOGIN_URLS });
@@ -57,6 +60,21 @@ async function init() {
         window.close();
     });
     switchButton.focus();
+}
+
+// Offer to put the banner back at the top centre, if it has been moved on this site
+async function showResetPosition(host) {
+    const { [POSITIONS_KEY]: positions = {} } = await chrome.storage.local.get(POSITIONS_KEY);
+    if (!positions[host]) return;
+    const row = document.getElementById('reset-row');
+    const button = document.getElementById('reset-position');
+    row.hidden = false;
+    button.addEventListener('click', async () => {
+        const { [POSITIONS_KEY]: current = {} } = await chrome.storage.local.get(POSITIONS_KEY);
+        delete current[host];
+        await chrome.storage.local.set({ [POSITIONS_KEY]: current });
+        row.textContent = 'Banner moved back to the top.';
+    });
 }
 
 document.getElementById('cancel').addEventListener('click', () => window.close());
